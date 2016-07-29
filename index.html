@@ -15,6 +15,9 @@
         margin-top: 40px;
         text-align: center;
       }
+      li {
+        padding: 10px;
+      }
     </style>
   </head>
   <body>
@@ -42,6 +45,7 @@
             approach = 1;
             suggestedUsernames = [];
             requestedUsername = $("#chg-balloon-input").val();
+            console.log(requestedUsername);
             $.ajax({
               url: "/coding-challenge/api/user",
               data: {username: requestedUsername},
@@ -67,6 +71,7 @@
 
         // Success callback for the AJAX request.
         var usernameCheck = function(payload) {
+          console.log(payload);
           if (!isValid(requestedUsername)) {
             $("#username-success-info").html(
               "<img src=https://i.imgur.com/hGdA8MN.png>" +
@@ -83,21 +88,25 @@
 
         // Returns true if a username is available.
         var uniqueUsernameCheck = function(proposedUsername) {
+          console.log("AJAX call with:" + proposedUsername);
           $.ajax({
             url: "/coding-challenge/api/user",
             data: {username: proposedUsername},
             type: "GET",
             error: apiFailure,
             success: function(data) {
+              console.log(data);
               if (data.length === 0) {
+                console.log("Unique found!");
                 suggestedUsernames.push(proposedUsername);
                 renderNames();
                 approach++;
               } else {
                 counter++;
               }
-              getUsernameSuggestion();
-            }
+              // getUsernameSuggestion();
+            },
+            complete: getUsernameSuggestion
           });
         };
 
@@ -135,14 +144,17 @@
         var getUsernameSuggestion = function() {
 
           if (approach === 1) {
+            console.log("Start Approach 1");
             if (numberOfDigits(requestedUsername) < 4) {
               var proposedUsername = requestedUsername + counter;
+              console.log("Check Approach 1: " + proposedUsername);
               uniqueUsernameCheck(proposedUsername);
             } else {
               approach++;
               getUsernameSuggestion();
             }
           } else if (approach === 2) {
+            console.log("Start Approach 2");
             var splitUsername = requestedUsername.split("");
             var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
             var proposedUsername = "";
@@ -153,16 +165,24 @@
                 }
               }
 
-              var randomWord = dictionary[Math.floor(Math.random() * dictionary.length)];
-              proposedUsernameAppended = randomWord + proposedUsername;
+              var randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              var proposedUsernameAppended = randomWord + proposedUsername;
+              console.log("Check Approach 2: " + proposedUsernameAppended)
               uniqueUsernameCheck(proposedUsernameAppended);
           } else if (approach === 3) {
-              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
-              proposedUsernameAppended = randomWord + requestedUsername;
-              uniqueUsernameCheck(proposedUsernameAppended);
-          } else if (approach === 4) {
+            console.log("Start Approach 3");
+
               randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
               proposedUsernameAppended = requestedUsername + randomWord;
+              console.log("Check Approach 3: " + proposedUsernameAppended);
+              uniqueUsernameCheck(proposedUsernameAppended);
+
+          } else if (approach === 4) {
+            console.log("Start Approach 4");
+
+              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              proposedUsernameAppended = randomWord + requestedUsername;
+              console.log("Check Approach 4: " + proposedUsernameAppended);
               uniqueUsernameCheck(proposedUsernameAppended);
           } else {
             // Exit
