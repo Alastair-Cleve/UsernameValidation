@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <link rel="icon" type="image/png" href="https://i.imgur.com/OOdN8ct.png">
     <base href="https://chegg-tutors.appspot.com/" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="/public/styles.css" />
@@ -42,13 +43,13 @@
         var counter = 0;
         var approach = 1;
 
-        // You must include the hashtag in order to refer to the correct button id.
+        // There was a mistake in this method: you must include the hashtag in
+        // order to refer to the correct button id.
         $("#chg-balloon-submit").click(function() {
             counter = 0;
             approach = 1;
             suggestedUsernames = [];
             requestedUsername = $("#chg-balloon-input").val();
-            console.log(requestedUsername);
             $.ajax({
               url: "/coding-challenge/api/user",
               data: {username: requestedUsername},
@@ -58,18 +59,13 @@
             });
         });
 
-        // Convenience method added so that users can push enter instead of clicking the button.
+        // Convenience method added so that users can push enter instead of
+        // clicking the button.
         $("#chg-balloon-input").keyup(function(event){
             if(event.keyCode === 13) {
               $("#chg-balloon-submit").click();
             }
         });
-
-        // Convenience method that allows users to click on suggested username.
-        // $("li").click(function() {
-        //   $("#chg-balloon-input").val($("li").text());
-        //   $("#chg-balloon-submit").click();
-        // });
 
         // Error callback for the AJAX request.
         var apiFailure = function() {
@@ -78,9 +74,9 @@
           )
         };
 
-        // Success callback for the AJAX request.
+        // Success callback for the AJAX request. New usernames are only generated if the
+        // user-provided username is alphanumerically valid and already exists.
         var usernameCheck = function(payload) {
-          console.log(payload);
           if (!isValid(requestedUsername)) {
             $("#username-success-info").html(
               "<img src=https://i.imgur.com/hGdA8MN.png>" +
@@ -95,31 +91,78 @@
           }
         };
 
-        // Returns true if a username is available.
+        // Creates new usernames: consists of four different approaches in order to add variety
+        // and provide a fallback in case approach #1 fails.
+        var getUsernameSuggestion = function() {
+
+          // Approach #1 - append a zero to the end of the username and increment until a
+          // unique is found. If the suggested username already has four digits, this
+          // approach is skipped (hence why four approaches are provided, see commment above).
+          if (approach === 1) {
+            if (numberOfDigits(requestedUsername) < 4) {
+              var proposedUsername = requestedUsername + counter;
+              uniqueUsernameCheck(proposedUsername);
+            } else {
+              approach++;
+              getUsernameSuggestion();
+            }
+
+          // Approach #2 - remove numbers and append random word to front.
+          } else if (approach === 2) {
+            var splitUsername = requestedUsername.split("");
+            var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+            var proposedUsername = "";
+
+              for(var i = 0; i < splitUsername.length; i++) {
+                if (!numbers.includes(splitUsername[i])) {
+                  proposedUsername += splitUsername[i];
+                }
+              }
+
+              var randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              var proposedUsernameAppended = randomWord + proposedUsername;
+              uniqueUsernameCheck(proposedUsernameAppended);
+
+          // Approach #3 - append random word to end.
+          } else if (approach === 3) {
+              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              proposedUsernameAppended = requestedUsername + randomWord;
+              uniqueUsernameCheck(proposedUsernameAppended);
+
+          // Approach #4 - append random word to beginning.
+          } else if (approach === 4) {
+              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              proposedUsernameAppended = randomWord + requestedUsername;
+              uniqueUsernameCheck(proposedUsernameAppended);
+
+          } else {
+            // Exit
+          }
+        };
+
+        // Saves username if available. Since AJAX requests are asynchronous,
+        // they control when getUsernameSuggestion is called.
         var uniqueUsernameCheck = function(proposedUsername) {
-          console.log("AJAX call with:" + proposedUsername);
           $.ajax({
             url: "/coding-challenge/api/user",
             data: {username: proposedUsername},
             type: "GET",
             error: apiFailure,
             success: function(data) {
-              console.log(data);
               if (data.length === 0) {
-                console.log("Unique found!");
                 suggestedUsernames.push(proposedUsername);
                 renderNames();
                 approach++;
               } else {
                 counter++;
               }
-              // getUsernameSuggestion();
             },
             complete: getUsernameSuggestion
           });
         };
 
-        // Counts the number of digits in a username.
+        // Counts the number of digits in a username. This is a helper method used in
+        // approach #1.
         var numberOfDigits = function(string) {
           var counter = 0;
           var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -128,11 +171,11 @@
               counter++
             }
           }
-
           return counter;
         };
 
-        // Returns false if a username contains non-alphanumeric characters.
+        // Returns false if a username contains non-alphanumeric characters. This is a
+        // helper method used in usernameCheck. The numbers refer to ASCII codes.
         var isValid = function(string) {
           if (string.length === 0 || string.length > 20) {
             return false;
@@ -149,55 +192,7 @@
           return true;
         };
 
-        // Creates new usernames.
-        var getUsernameSuggestion = function() {
-
-          if (approach === 1) {
-            console.log("Start Approach 1");
-            if (numberOfDigits(requestedUsername) < 4) {
-              var proposedUsername = requestedUsername + counter;
-              console.log("Check Approach 1: " + proposedUsername);
-              uniqueUsernameCheck(proposedUsername);
-            } else {
-              approach++;
-              getUsernameSuggestion();
-            }
-          } else if (approach === 2) {
-            console.log("Start Approach 2");
-            var splitUsername = requestedUsername.split("");
-            var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-            var proposedUsername = "";
-
-              for(var i = 0; i < splitUsername.length; i++) {
-                if (!numbers.includes(splitUsername[i])) {
-                  proposedUsername += splitUsername[i];
-                }
-              }
-
-              var randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
-              var proposedUsernameAppended = randomWord + proposedUsername;
-              console.log("Check Approach 2: " + proposedUsernameAppended)
-              uniqueUsernameCheck(proposedUsernameAppended);
-          } else if (approach === 3) {
-            console.log("Start Approach 3");
-
-              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
-              proposedUsernameAppended = requestedUsername + randomWord;
-              console.log("Check Approach 3: " + proposedUsernameAppended);
-              uniqueUsernameCheck(proposedUsernameAppended);
-
-          } else if (approach === 4) {
-            console.log("Start Approach 4");
-
-              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
-              proposedUsernameAppended = randomWord + requestedUsername;
-              console.log("Check Approach 4: " + proposedUsernameAppended);
-              uniqueUsernameCheck(proposedUsernameAppended);
-          } else {
-            // Exit
-          }
-        };
-
+        // Renders the suggested usernames.
         var renderNames = function() {
           newUsernamesMessage(suggestedUsernames[0], suggestedUsernames[1], suggestedUsernames[2]);
         };
@@ -210,14 +205,16 @@
             "<ul><li>" + username1 + "</li><li>" + username2 + "</li><li>" + username3 + "</li></ul>"
           )
 
+          // Convenience method added to allow the user to click on one of the
+          // suggested usernames.
           $("li").click(function() {
             $("#chg-balloon-input").val($(this).text());
             $("#chg-balloon-submit").click();
           });
         };
 
-        // With time permitting, I would move this variable to another file (a standalone txt) and re-structure
-        // so that the dictionary is modular and easier to maintain.
+        // With time permitting, I would move this variable to another file (a standalone txt)
+        // and re-structure so that the dictionary is modular and easier to maintain.
         var dictionary = `add
           after
           again
