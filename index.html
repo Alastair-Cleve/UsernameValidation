@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base href="https://chegg-tutors.appspot.com/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/public/styles.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <style>
+      ul {
+        list-style-type: none;
+      }
+      #username-success-info {
+        border-top: 1px solid #CCC;
+        padding: 10px;
+        margin-top: 40px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chg-balloon-logo-container">
+        <img src="/public/img/logo.png" />
+    </div>
+    <div id="chg-balloon-controls-container">
+        <p>Enter a username to get started!</p>
+        <input id="chg-balloon-input" maxlength="2048" placeholder="e.g. BalloonMaster99"
+            name="username" autocomplete="off" type="text" value="" />
+        <button id="chg-balloon-submit">Check availability</button>
+    </div>
+    <div id="username-success-info">
+    </div>
+
+    <script type="text/javascript">
+        var suggestedUsernames = [];
+        var requestedUsername = "";
+        var counter = 0;
+        var approach = 1;
+
+        // You must include the hashtag in order to refer to the correct button id.
+        $("#chg-balloon-submit").click(function() {
+            counter = 0;
+            approach = 1;
+            suggestedUsernames = [];
+            requestedUsername = $("#chg-balloon-input").val();
+            $.ajax({
+              url: "/coding-challenge/api/user",
+              data: {username: requestedUsername},
+              type: "GET",
+              error: apiFailure,
+              success: usernameCheck
+            });
+        });
+
+        // Convenience method added so that users can push enter instead of clicking the button.
+        $("#chg-balloon-input").keyup(function(event){
+            if(event.keyCode === 13) {
+              $("#chg-balloon-submit").click();
+            }
+        });
+
+        // Error callback for the AJAX request.
+        var apiFailure = function() {
+          $("#username-success-info").html(
+            "The username fairy is taking a nap. Please check back later."
+          )
+        };
+
+        // Success callback for the AJAX request.
+        var usernameCheck = function(payload) {
+          if (!isValid(requestedUsername)) {
+            $("#username-success-info").html(
+              "<img src=https://i.imgur.com/hGdA8MN.png>" +
+              " Please enter a valid username that contains <b>alphanumeric characters</b> " +
+              "(a-z, A-Z, 0-9).<br><br>Check to make sure your " +
+              "username does not contain other symbols, dashes, or spaces, and limit it to 20 characters."
+            )
+          } else if (payload.length === 0) {
+            $("#username-success-info").html("<img src=https://i.imgur.com/WFun9QY.png> Congrats! <b>" + requestedUsername + "</b> is available.");
+          } else {
+            getUsernameSuggestion();
+          }
+        };
+
+        // Returns true if a username is available.
+        var uniqueUsernameCheck = function(proposedUsername) {
+          $.ajax({
+            url: "/coding-challenge/api/user",
+            data: {username: proposedUsername},
+            type: "GET",
+            error: apiFailure,
+            success: function(data) {
+              if (data.length === 0) {
+                suggestedUsernames.push(proposedUsername);
+                renderNames();
+                approach++;
+              } else {
+                counter++;
+              }
+              getUsernameSuggestion();
+            }
+          });
+        };
+
+        // Counts the number of digits in a username.
+        var numberOfDigits = function(string) {
+          var counter = 0;
+          var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+          for(var i = 0; i < string.length; i++) {
+            if (numbers.includes(string[i])) {
+              counter++
+            }
+          }
+
+          return counter;
+        };
+
+        // Returns false if a username contains non-alphanumeric characters.
+        var isValid = function(string) {
+          if (string.length === 0 || string.length > 20) {
+            return false;
+          }
+          for (var i = 0, len = string.length; i < len; i++) {
+            var code = string.charCodeAt(i);
+            if (!(code > 47 && code < 58) && // numeric (0-9)
+                !(code > 64 && code < 91) && // upper alpha (A-Z)
+                !(code > 96 && code < 123) // lower alpha (a-z)
+              ) {
+              return false;
+            }
+          }
+          return true;
+        };
+
+        // Creates new usernames.
+        var getUsernameSuggestion = function() {
+
+          if (approach === 1) {
+            if (numberOfDigits(requestedUsername) < 4) {
+              var proposedUsername = requestedUsername + counter;
+              uniqueUsernameCheck(proposedUsername);
+            } else {
+              approach++;
+              getUsernameSuggestion();
+            }
+          } else if (approach === 2) {
+            var splitUsername = requestedUsername.split("");
+            var numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+            var proposedUsername = "";
+
+              for(var i = 0; i < splitUsername.length; i++) {
+                if (!numbers.includes(splitUsername[i])) {
+                  proposedUsername += splitUsername[i];
+                }
+              }
+
+              var randomWord = dictionary[Math.floor(Math.random() * dictionary.length)];
+              proposedUsernameAppended = randomWord + proposedUsername;
+              uniqueUsernameCheck(proposedUsernameAppended);
+          } else if (approach === 3) {
+              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              proposedUsernameAppended = randomWord + requestedUsername;
+              uniqueUsernameCheck(proposedUsernameAppended);
+          } else if (approach === 4) {
+              randomWord = dictionary[Math.floor(Math.random() * dictionary.length)].trim();
+              proposedUsernameAppended = requestedUsername + randomWord;
+              uniqueUsernameCheck(proposedUsernameAppended);
+          } else {
+            // Exit
+          }
+        };
+
+        var renderNames = function() {
+          newUsernamesMessage(suggestedUsernames[0], suggestedUsernames[1], suggestedUsernames[2]);
+        };
+
+        // This method displays the alternate suggested usernames.
+        var newUsernamesMessage = function(username1, username2, username3) {
+          $("#username-success-info").html(
+            "<img src=https://i.imgur.com/JoYI9WL.png>" +
+            " <b>" + requestedUsername + "</b> is not available. How about one of these:" +
+            "<ul><li>" + username1 + "</li><li>" + username2 + "</li><li>" + username3 + "</li></ul>"
+          )
+        };
+
+        // With time permitting, I would move this variable to another file (a standalone txt) and re-structure
+        // so that the dictionary is modular and easier to maintain.
+        var dictionary = `add
+          after
+          again
+          any
+          apart
+          apple
+          arm
+          baby
+          bake
+          bang
+          banana
+          bark
+          beat
+          been
+          being
+          belt
+          bent
+          best
+          bill
+          bike
+          bird
+          birth
+          bone
+          born
+          black
+          blew
+          block
+          blue
+          book
+          brag
+          bring
+          brook
+          brother
+          brown
+          bush
+          came
+          cane
+          card
+          cart
+          case
+          chain
+          chair
+          chalk
+          chat
+          chin
+          chop
+          clam
+          clan
+          clap
+          class
+          claw
+          clay
+          clean
+          clover
+          cloud
+          crayon
+          club
+          coat
+          come
+          cook
+          cool
+          corn
+          could
+          cram
+          crew
+          crib
+          crow
+          crowd
+          crown
+          cube
+          dark
+          deal
+          desk
+          dew
+          dime
+          dine
+          dirt
+          doll
+          door
+          draw
+          dress
+          drink
+          drop
+          dull
+          each
+          east
+          easy
+          eight
+          eleven
+          end
+          every
+          fang
+          farther
+          fast
+          father
+          fell
+          few
+          field
+          fill
+          fine
+          first
+          flag
+          flat
+          flew
+          flower
+          fog
+          fool
+          foot
+          fort
+          free
+          fresh
+          from
+          game
+          gang
+          gave
+          gift
+          girl
+          give
+          glad
+          going
+          golf
+          gone
+          grape
+          grass
+          gray
+          green
+          grew
+          grit
+          gull
+          had
+          hand
+          hang
+          happy
+          hard
+          harm
+          has
+          have
+          heat
+          heavy
+          help
+          here
+          hide
+          hill
+          hint
+          home
+          hope
+          horn
+          how
+          hush
+          ill
+          inside
+          into
+          jaw
+          joke
+          juice
+          jump
+          just
+          keep
+          king
+          kite
+          know
+          last
+          lake
+          late
+          like
+          lime
+          line
+          live
+          look
+          love
+          luck
+          made
+          maid
+          make
+          many
+          map
+          mask
+          may
+          meal
+          meat
+          meet
+          men
+          mice
+          milk
+          mine
+          mint
+          mix
+          moon
+          more
+          morning
+          mother
+          much
+          mule
+          must
+          nail
+          name
+          neat
+          neck
+          nest
+          never
+          next
+          new
+          nine
+          noon
+          nose
+          note
+          now
+          odd
+          of
+          old
+          once
+          open
+          orange
+          other
+          over
+          pain
+          pants
+          part
+          pave
+          pear
+          pen
+          pencil
+          pets
+          pick
+          pink
+          plan
+          plant
+          play
+          poor
+          pretty
+          print
+          punch
+          purple
+          put
+          rain
+          rang
+          rank
+          read
+          ride
+          river
+          road
+          rock
+          rode
+          room
+          rope
+          round
+          rub
+          rubber
+          sail
+          sale
+          same
+          sank
+          save
+          see
+          seed
+          seen
+          seep
+          sell
+          send
+          seven
+          shall
+          shape
+          sink
+          shake
+          shirt
+          ship
+          shoes
+          shop
+          show
+          shut
+          sick
+          side
+          size
+          sled
+          sleep
+          slip
+          slow
+          sister
+          smell
+          snail
+          snap
+          snore
+          snow
+          snug
+          six
+          soda
+          sofa
+          sold
+          some
+          soon
+          spit
+          star
+          start
+          stay
+          step
+          stew
+          still
+          stir
+          stone
+          stool
+          stop
+          stove
+          straw
+          string
+          such
+          summer
+          sun
+          swing
+          table
+          tail
+          take
+          tale
+          tank
+          team
+          tell
+          ten
+          tent
+          test
+          thank
+          their
+          them
+          then
+          these
+          they
+          thick
+          thing
+          think
+          third
+          this
+          time
+          today
+          took
+          train
+          trip
+          truck
+          trust
+          try
+          twelve
+          thank
+          them
+          then
+          there
+          think
+          those
+          tree
+          under
+          upon
+          use
+          used
+          very
+          vest
+          vote
+          wait
+          walk
+          want
+          was
+          water
+          well
+          were
+          west
+          when
+          which
+          white
+          who
+          will
+          wing
+          winter
+          with
+          woman
+          women
+          yell
+          zero
+          zone`.split("\n");
+    </script>
+
+  </body>
+</html>
