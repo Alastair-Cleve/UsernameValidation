@@ -18,6 +18,9 @@
       li {
         padding: 10px;
       }
+      li:hover {
+        color: orange;
+      }
     </style>
   </head>
   <body>
@@ -61,6 +64,12 @@
               $("#chg-balloon-submit").click();
             }
         });
+
+        // Convenience method that allows users to click on suggested username.
+        // $("li").click(function() {
+        //   $("#chg-balloon-input").val($("li").text());
+        //   $("#chg-balloon-submit").click();
+        // });
 
         // Error callback for the AJAX request.
         var apiFailure = function() {
@@ -200,6 +209,11 @@
             " <b>" + requestedUsername + "</b> is not available. How about one of these:" +
             "<ul><li>" + username1 + "</li><li>" + username2 + "</li><li>" + username3 + "</li></ul>"
           )
+
+          $("li").click(function() {
+            $("#chg-balloon-input").val($(this).text());
+            $("#chg-balloon-submit").click();
+          });
         };
 
         // With time permitting, I would move this variable to another file (a standalone txt) and re-structure
